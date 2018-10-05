@@ -45,6 +45,7 @@
       $collections[$v] = $v;
     }
 
+    // Get products with collection.
     $service = new Shopify\Service\CollectService($client);
     $collects = $service->all();
     foreach ($collects as $collect) {
@@ -59,7 +60,7 @@
       $service = new Shopify\Service\ProductService($client);
       foreach ($products as $productId) {
         $product = $service->get($productId);
-        // Get varioants.
+        // Get variants.
         $variants = $product->variants;
         foreach ($variants as $variant) {
           $compare_at_price = $variant->compare_at_price;
@@ -74,7 +75,7 @@
           // Get stock level.
           $inventory_quantity = $variant->inventory_quantity;
           if ($inventory_quantity <= 0) {
-            // Add sale tag.
+            // Add out of stock tag.
             $tags = trim($product->tags) . ', Out of stock';
             $product->tags = $tags;
             $service->update($product);
