@@ -1,0 +1,6 @@
+{
+    "require": {
+        "robwittman/shopify-php-sdk": "^2.1",
+        "mmucklo/krumo": "^0.5.7"
+    }
+}
