@@ -1,5 +1,12 @@
 <?php
 
+  $acces_key = $_GET['access_key'];
+
+  if ($acces_key != 'qwerty') {
+    header('HTTP/1.0 403 Forbidden');
+    exit();
+  }
+
   require 'vendor/autoload.php';
 
   use Shopify\Enum\Fields\CollectFields;
