@@ -8,8 +8,6 @@
   use Shopify\Enum\Fields\ProductFields;
   use Shopify\Enum\Fields\ProductVariantFields;
 
-  $formCollection = [];
-
   $client = new Shopify\PrivateApi([
     'api_key' => '256dfdf2e9ce2e9088b806459307b656',
     'password' => 'dcb157469977d0b248c2f8a7972599ce',
@@ -17,34 +15,25 @@
     'myshopify_domain' => 'singulart.myshopify.com',
   ]);
 
-  // Get smart collection.
-  $service = new Shopify\Service\SmartCollectionService($client);
-  $smartCollections = $service->all();
-  if (!empty($smartCollections)) {
-    foreach ($smartCollections as $collection) {
-      $formCollection[$collection->id] = $collection->title;
-    }
+  // Get webhook products.
+  $webhook_content = '';
+  $webhook = fopen('php://input' , 'rb');
+  while (!feof($webhook)) {
+    $webhook_content .= fread($webhook, 4096);
   }
+  fclose($webhook);
+  $products = json_decode($webhook_content, true);
 
-  // Get custom collection.
-  $service = new Shopify\Service\CustomCollectionService($client);
-  $customCollections = $service->all();
-  if (!empty($customCollections)) {
-    foreach ($customCollections as $collection) {
-      $formCollection[$collection->id] = $collection->title;
-    }
-  }
-
-  // Return form.
-  include 'tpl/form.php';
-
-  // Get form data.
-  if (!empty($_POST)) {
-    $collections = $products = [];
-    foreach ($_POST as $v) {
+  // Get settings.
+  $settings = file_get_contents('settings.txt');
+  $settings = explode(PHP_EOL, $settings);
+  if (!empty($settings)) {
+    foreach ($settings as $v) {
       $collections[$v] = $v;
     }
+  }
 
+  if (!empty($collections)) {
     // Get products with collection.
     $service = new Shopify\Service\CollectService($client);
     $collects = $service->all();
@@ -83,5 +72,4 @@
         }
       }
     }
-    echo 'Done.';
   }
