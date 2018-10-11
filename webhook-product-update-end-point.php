@@ -53,23 +53,28 @@
       }
     }
 
+    $service = new Shopify\Service\ProductService($client);
+
     foreach ($json->variants as $row) {
       if (isset($products[$row->product_id])) {
         // Add sale tag.
-        $service = new Shopify\Service\ProductService($client);
         $product = $service->get($row->product_id);
         // Get variants.
         $variants = $product->variants;
+        $update = FALSE;
         foreach ($variants as $variant) {
           $compare_at_price = $variant->compare_at_price;
           $price = $variant->price;
           // Compare price.
           if ($compare_at_price > $price) {
-            // Add sale tag.
-            $tags = trim($product->tags) . ', Sale';
-            $product->tags = $tags;
-            $service->update($product);
+            $update = TRUE;
           }
+        }
+        if ($update) {
+          // Add sale tag.
+          $tags = trim($product->tags) . ', Sale';
+          $product->tags = $tags;
+          $service->update($product);
         }
       }
     }

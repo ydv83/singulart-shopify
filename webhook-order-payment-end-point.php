@@ -31,16 +31,44 @@
   fclose($webhook);
   $json = json_decode($webhook_content, true);
 
+  //Get settings.
+  $settings = file_get_contents('settings.txt');
+  $settings = explode(PHP_EOL, $settings);
+  if (!empty($settings)) {
+    foreach ($settings as $v) {
+      $collections[$v] = $v;
+    }
+  }
+  // Get products in acollections.
+  if (!empty($collections)) {
+    // Get products with collection.
+    $service = new Shopify\Service\CollectService($client);
+    $collects = $service->all();
+    foreach ($collects as $collect) {
+      $collectId = $collect->collection_id;
+      if (isset($collections[$collectId])) {
+        $products[$collect->product_id] = $collect->product_id;
+      }
+    }
+  }
+
+  $service = new Shopify\Service\ProductService($client);
+
   foreach ($json->line_items as $row) {
-    // Add out of stock tag.
-    $service = new Shopify\Service\ProductService($client);
-    $product = $service->get($row->product_id);
-    // Get variants.
-    $variants = $product->variants;
-    foreach ($variants as $variant) {
-      // Get stock level.
-      $inventory_quantity = $variant->inventory_quantity;
-      if ($inventory_quantity <= 0) {
+    if (!empty($products[$row->product_id])) {
+      // Add out of stock tag.
+      $product = $service->get($row->product_id);
+      // Get variants.
+      $variants = $product->variants;
+      $update = FALSE;
+      foreach ($variants as $variant) {
+        // Get stock level.
+        $inventory_quantity = $variant->inventory_quantity;
+        if ($inventory_quantity <= 0) {
+          $update = TRUE;
+        }
+      }
+      if ($update) {
         // Add out of stock tag.
         $tags = trim($product->tags) . ', Out of stock';
         $product->tags = $tags;
