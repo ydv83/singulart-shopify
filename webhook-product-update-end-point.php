@@ -29,33 +29,35 @@
     $webhook_content .= fread($webhook, 4096);
   }
   fclose($webhook);
-  $products = json_decode($webhook_content, true);
+  $json = json_decode($webhook_content, true);
 
-  // Get settings.
-  $settings = file_get_contents('settings.txt');
-  $settings = explode(PHP_EOL, $settings);
-  if (!empty($settings)) {
-    foreach ($settings as $v) {
-      $collections[$v] = $v;
+  if (!empty($json->variants)) {
+    //Get settings.
+    $settings = file_get_contents('settings.txt');
+    $settings = explode(PHP_EOL, $settings);
+    if (!empty($settings)) {
+      foreach ($settings as $v) {
+        $collections[$v] = $v;
+      }
     }
-  }
-
-  if (!empty($collections)) {
-    // Get products with collection.
-    $service = new Shopify\Service\CollectService($client);
-    $collects = $service->all();
-    foreach ($collects as $collect) {
-      $collectId = $collect->collection_id;
-      if (isset($collections[$collectId])) {
-        $products[] = $collect->product_id;
+    // Get products in acollections.
+    if (!empty($collections)) {
+      // Get products with collection.
+      $service = new Shopify\Service\CollectService($client);
+      $collects = $service->all();
+      foreach ($collects as $collect) {
+        $collectId = $collect->collection_id;
+        if (isset($collections[$collectId])) {
+          $products[$collect->product_id] = $collect->product_id;
+        }
       }
     }
 
-    // Add rules.
-    if (!empty($products)) {
-      $service = new Shopify\Service\ProductService($client);
-      foreach ($products as $productId) {
-        $product = $service->get($productId);
+    foreach ($json->variants as $row) {
+      if (isset($products[$row->product_id])) {
+        // Add sale tag.
+        $service = new Shopify\Service\ProductService($client);
+        $product = $service->get($row->product_id);
         // Get variants.
         $variants = $product->variants;
         foreach ($variants as $variant) {
@@ -68,15 +70,11 @@
             $product->tags = $tags;
             $service->update($product);
           }
-          // Get stock level.
-          $inventory_quantity = $variant->inventory_quantity;
-          if ($inventory_quantity <= 0) {
-            // Add out of stock tag.
-            $tags = trim($product->tags) . ', Out of stock';
-            $product->tags = $tags;
-            $service->update($product);
-          }
         }
       }
     }
   }
+
+  header('HTTP/1.0 200 OK');
+
+  exit();
